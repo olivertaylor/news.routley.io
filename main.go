@@ -135,7 +135,7 @@ func executeTemplate(writer io.Writer, templateData *TemplateData) error {
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<title>rss.olivertaylor.net</title>
 		<style>
-			@import url("http://olivertaylor.net/style.css");
+			@import url("https://www.olivertaylor.net/style.css");
 			li { margin-bottom: .5rem; }
 			li span.host { color: #aaa; }
 			a:visited { color: #aaa; }
