@@ -145,7 +145,7 @@ func executeTemplate(writer io.Writer, templateData *TemplateData) error {
 		<h1>News</h1>
 
 		<ul>
-			{{ range .Posts }}<li><a href="{{ .Link }}">{{ .Title }}</a> —  <span class="host">{{ .Host }}</span></li>
+			{{ range .Posts }}<li><a href="{{ .Link }}">{{ .Title }}</a> <span class="host">{{ .Host }}</span></li>
 			{{ end }}
 		</ul>
 
