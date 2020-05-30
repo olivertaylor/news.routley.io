@@ -24,7 +24,6 @@ type Post struct {
 	Title     string
 	Published time.Time
 	Host      string
-	Description string
 }
 
 var (
@@ -114,7 +113,6 @@ func getPosts(ctx context.Context, feeds []string) []*Post {
 				Title:     item.Title,
 				Published: *published,
 				Host:      parsedLink.Host,
-				Description: item.Description,
 			})
 		}
 	}
@@ -147,7 +145,7 @@ func executeTemplate(writer io.Writer, templateData *TemplateData) error {
 		<h1>News</h1>
 
 		<ul>
-			{{ range .Posts }}<li><a href="{{ .Link }}">{{ .Title }}</a> <span class="host">{{ .Host }}</span><p>{{ .Description }}</p></li>
+			{{ range .Posts }}<li><a href="{{ .Link }}">{{ .Title }}</a> <span class="host">{{ .Host }}</span></li>
 			{{ end }}
 		</ul>
 
