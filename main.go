@@ -114,6 +114,7 @@ func getPosts(ctx context.Context, feeds []string) []*Post {
 				Title:     item.Title,
 				Published: *published,
 				Host:      parsedLink.Host,
+				Description: item.Description,
 			})
 		}
 	}
