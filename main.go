@@ -39,8 +39,6 @@ var (
 		"https://kk.org/cooltools/feed/",
 		"https://craigmod.com/index.xml",
 		"https://waxy.org/category/links/feed/",
-		"http://feeds.kottke.org/main",
-		"http://radio3.io/users/davewiner/rss.xml",
 	}
 
 	// Show up to 60 days of posts
