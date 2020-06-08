@@ -29,7 +29,6 @@ type Post struct {
 
 var (
 	feeds = []string{
-		"https://daringfireball.net/feeds/main",
 		"https://writings.stephenwolfram.com/feed/",
 		"https://mjtsai.com/blog/feed/",
 		"https://panic.com/blog/feed/",
@@ -39,6 +38,7 @@ var (
 		"https://kk.org/cooltools/feed/",
 		"https://craigmod.com/index.xml",
 		"https://waxy.org/category/links/feed/",
+		"http://feeds.feedburner.com/mitsmr",
 	}
 
 	// Show up to 60 days of posts
