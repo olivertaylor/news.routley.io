@@ -31,7 +31,6 @@ var (
 	feeds = []string{
 		"https://writings.stephenwolfram.com/feed/",
 		"https://mjtsai.com/blog/feed/",
-		"https://tidbits.com/feed/",
 		"https://panic.com/blog/feed/",
 		"https://routley.io/posts/index.xml",
 		"https://xkcd.com/rss.xml",
