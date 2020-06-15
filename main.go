@@ -31,14 +31,13 @@ var (
 	feeds = []string{
 		"https://writings.stephenwolfram.com/feed/",
 		"https://mjtsai.com/blog/feed/",
+		"https://tidbits.com/feed/",
 		"https://panic.com/blog/feed/",
-		"http://feeds.feedburner.com/marginalrevolution/feed",
 		"https://routley.io/posts/index.xml",
 		"https://xkcd.com/rss.xml",
 		"https://kk.org/cooltools/feed/",
 		"https://craigmod.com/index.xml",
 		"https://waxy.org/category/links/feed/",
-		"http://feeds.feedburner.com/mitsmr",
 	}
 
 	// Show up to 60 days of posts
