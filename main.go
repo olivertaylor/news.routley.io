@@ -44,6 +44,7 @@ var (
 		"https://www.economist.com/leaders/rss.xml",
 		"https://www.economist.com/special-report/rss.xml",
 		"https://www.economist.com/the-economist-explains/rss.xml",
+		"https://sachachua.com/blog/category/emacs-news/feed",
 	}
 
 	// Show up to 60 days of posts
