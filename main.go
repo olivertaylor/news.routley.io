@@ -48,6 +48,7 @@ var (
 		"https://standardebooks.org/rss/new-releases",
 		"https://protesilaos.com/codelog.xml",
 		"https://idlewords.com/index.xml",
+		"https://daringfireball.net/feeds/main",
 	}
 
 	// Show up to 60 days of posts
