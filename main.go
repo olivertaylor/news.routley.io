@@ -44,7 +44,7 @@ var (
 		"https://idlewords.com/index.xml",
 		"https://oremacs.com/atom.xml",
 		"https://irreal.org/blog/?feed=rss2",
-		"http://endlessparentheses.com/atom.xml"
+		"https://endlessparentheses.com/atom.xml",
 	}
 
 	// Show up to 60 days of posts
