@@ -45,6 +45,7 @@ var (
 		"https://oremacs.com/atom.xml",
 		"https://irreal.org/blog/?feed=rss2",
 		"https://endlessparentheses.com/atom.xml",
+		"https://200ok.ch/atom.xml",
 	}
 
 	// Show up to 60 days of posts
