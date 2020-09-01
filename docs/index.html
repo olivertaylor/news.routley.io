@@ -89,6 +89,189 @@ Kissa by SOLD OUT Last month I announced my new book, Kissa by Kissa. And then, 
 			</li>
 			
 			<li>
+				<a class="headline" href="https://www.with-emacs.com/posts/tutorials/customize-completion-at-point/">Customize completion-at-point &#8594;</a> <span class="host">www.with-emacs.com</span>
+				<div class="description"><div><div class="paragraph">
+<p>This post is an overview of text completion in Emacs using <code>completion-at-point</code>
+and how you can customize it. I will assume that you already know some Elisp and
+are familiar with the basics about
+<a href="https://with-emacs.com/posts/tutorials/almost-all-you-need-to-know-about-variables/">variables</a>
+and
+<a href="https://with-emacs.com/posts/tutorials/what-you-need-to-know-about-hooks/">hooks</a>.
+All examples also assume you use a fairly recent Emacs version (v.26 or later).</p>
+</div>
+<div class="sect1">
+<h3 id="_usage">Usage</h3>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The <code>completion-at-point</code> command prompts the user with a list of completions
+for buffer text. Usually it is bound to <kbd>M-TAB</kbd> which is sometimes also
+bound to the wrapper command <code>complete-symbol</code>.</p>
+</div>
+<div class="paragraph">
+<p>For editable buffers <kbd>TAB</kbd> is regularly used for indentation but you can also
+combine indentation and completion on <kbd>TAB</kbd> by configuring
+<code>tab-always-indent</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="emacs"><span class="tok-c1">;; First try to indent the current line, and if the line</span>
+<span class="tok-c1">;; was already indented, then try `completion-at-point'</span>
+<span class="tok-p">(</span><span class="tok-k">setq</span> <span class="tok-nv">tab-always-indent</span> <span class="tok-ss">'complete</span><span class="tok-p">)</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The UI for the completion operation is determined by the value of
+<code>completion-in-region-function</code>. Completion frameworks like
+<a href="https://github.com/emacs-helm/helm/">helm</a>,
+<a href="https://github.com/abo-abo/swiper/">ivy</a> or
+<a href="https://github.com/raxod502/selectrum">selectrum</a> provide a suitable function for
+this and set it automatically when you enable their modes.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h3 id="_adding_completions">Adding completions</h3>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The completion data gets gathered by running <code>completion-at-point-functions</code>. As
+discussed in a
+<a href="https://with-emacs.com/posts/tutorials/what-you-need-to-know-about-hooks/">previous
+post</a> you can add functions to hooks buffer locally. This is also what major
+modes and language server clients like
+<a href="https://github.com/joaotavora/eglot">eglot</a> or
+<a href="https://github.com/emacs-lsp/lsp-mode">lsp-mode</a> do to provide their completions.</p>
+</div>
+<div class="paragraph">
+<p>If the local hook fails to return any candidates the global hook runs. You can
+use this to add your own completions as a fallback. The functions of this hook
+receive no arguments and should return completion data containing the start and
+end positions of the text to be completed, a completion table and optionally
+some extra information (see the docstring of <code>completion-at-point-functions</code> for
+more details).</p>
+</div>
+<div class="paragraph">
+<p>Here is useful example that adds file path completion to the hook:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="emacs"><span class="tok-p">(</span><span class="tok-nv">autoload</span> <span class="tok-ss">'ffap-file-at-point</span> <span class="tok-s">"ffap"</span><span class="tok-p">)</span>
+<span class="tok-p">(</span><span class="tok-nb">defun</span> <span class="tok-nv">complete-path-at-point+</span> <span class="tok-p">()</span>
+  <span class="tok-s">"Return completion data for UNIX path at point."</span>
+  <span class="tok-p">(</span><span class="tok-k">let</span> <span class="tok-p">((</span><span class="tok-nv">fn</span> <span class="tok-p">(</span><span class="tok-nv">ffap-file-at-point</span><span class="tok-p">))</span>
+        <span class="tok-p">(</span><span class="tok-nv">fap</span> <span class="tok-p">(</span><span class="tok-nv">thing-at-point</span> <span class="tok-ss">'filename</span><span class="tok-p">)))</span>
+    <span class="tok-p">(</span><span class="tok-nb">when</span> <span class="tok-p">(</span><span class="tok-nb">and</span> <span class="tok-p">(</span><span class="tok-nb">or</span> <span class="tok-nv">fn</span> <span class="tok-p">(</span><span class="tok-nb">equal</span> <span class="tok-s">"/"</span> <span class="tok-nv">fap</span><span class="tok-p">))</span>
+               <span class="tok-p">(</span><span class="tok-nv">save-excursion</span>
+                 <span class="tok-p">(</span><span class="tok-nv">search-backward</span> <span class="tok-nv">fap</span> <span class="tok-p">(</span><span class="tok-nv">line-beginning-position</span><span class="tok-p">)</span> <span class="tok-no">t</span><span class="tok-p">)))</span>
+      <span class="tok-p">(</span><span class="tok-nb">list</span> <span class="tok-p">(</span><span class="tok-nv">match-beginning</span> <span class="tok-mi">0</span><span class="tok-p">)</span>
+            <span class="tok-p">(</span><span class="tok-nv">match-end</span> <span class="tok-mi">0</span><span class="tok-p">)</span>
+            <span class="tok-nf">#'</span><span class="tok-nv">completion-file-name-table</span> <span class="tok-ss">:exclusive</span> <span class="tok-ss">'no</span><span class="tok-p">))))</span>
+
+<span class="tok-p">(</span><span class="tok-nv">add-hook</span> <span class="tok-ss">'completion-at-point-functions</span>
+          <span class="tok-nf">#'</span><span class="tok-nv">complete-path-at-point+</span>
+          <span class="tok-ss">'append</span><span class="tok-p">)</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Afterwards <code>completion-at-point</code> will offer you file completions when your point
+is at a path. This is especially nice with
+<a href="https://github.com/raxod502/selectrum">selectrum</a> which won’t exit file
+completions after each path level so you can conveniently navigate to the path
+like you would do with <code>find-file</code>.</p>
+</div>
+<div class="paragraph">
+<p>The function above looks for a file path at point. If it finds one it returns
+the file path boundaries and the completion table. There will be more info about
+completion tables in the next section. The <code>no</code> value for <code>:exclusive</code> is
+added so that other <code>completion-at-point-functions</code> are continued to be
+queried if the completion table should fail.</p>
+</div>
+<div class="paragraph">
+<p>You can use a similar pattern for any other completion functions you might want
+to add. See for example <a href="https://emacs.stackexchange.com/a/15277/9198">this</a>
+stackexchange answer which shows how to add completions from a custom dictionary
+or <a href="https://emacs.stackexchange.com/a/30704/9198">this</a> one which shows an example
+of adding <code>dabbrev</code> candidates as completions.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h3 id="_completion_tables">Completion tables</h3>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Completion tables can have many different formats. A list of strings, an alist,
+an obarray, a hash table or so called dynamic completion table which is a
+function. Those table formats can also be used by <code>completing-read</code> which is the
+function Emacs commands typically use to prompt a user with a list of
+completions.</p>
+</div>
+<div class="paragraph">
+<p>There isn’t much to say about static tables so this section will look at the
+more interesting dynamic ones. The last example used the already existing
+<code>completion-file-name-table</code> function. You need a dynamic table for file
+completion because the returned file names will change based on the input path.
+Dynamic tables are also useful if you want to configure some custom completion
+behaviour which the table can control via its metadata. If you call the table
+with the <code>metadata</code> action argument it should return it, see <code>(info "(elisp)
+Programmed Completion")</code> for the full details.</p>
+</div>
+<div class="paragraph">
+<p>The following example shows how you can add some metadata to completions. Emacs
+comes with a little helper function <code>complete-with-action</code> which you can use to
+handle the rest of the API so you only need to care about handling the
+<code>metadata</code> action:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="emacs"><span class="tok-p">(</span><span class="tok-k">let*</span> <span class="tok-p">((</span><span class="tok-nv">alist</span> <span class="tok-o">'</span><span class="tok-p">((</span><span class="tok-s">"GNU"</span> <span class="tok-o">.</span> <span class="tok-s">"GNU is not Unix"</span><span class="tok-p">)</span>
+                <span class="tok-p">(</span><span class="tok-s">"Emacs"</span> <span class="tok-o">.</span> <span class="tok-s">"Eight Megabytes And Constantly Swapping"</span><span class="tok-p">)))</span>
+       <span class="tok-p">(</span><span class="tok-nv">annotf</span> <span class="tok-p">(</span><span class="tok-k">lambda</span> <span class="tok-p">(</span><span class="tok-nv">str</span><span class="tok-p">)</span>
+                 <span class="tok-p">(</span><span class="tok-nb">format</span> <span class="tok-s">" (%s)"</span> <span class="tok-p">(</span><span class="tok-nb">cdr</span> <span class="tok-p">(</span><span class="tok-nb">assoc</span> <span class="tok-nv">str</span> <span class="tok-nv">alist</span><span class="tok-p">))))))</span>
+  <span class="tok-p">(</span><span class="tok-nv">completing-read</span> <span class="tok-s">"Candidates: "</span>
+                   <span class="tok-p">(</span><span class="tok-k">lambda</span> <span class="tok-p">(</span><span class="tok-nv">str</span> <span class="tok-nv">pred</span> <span class="tok-nv">action</span><span class="tok-p">)</span>
+                     <span class="tok-p">(</span><span class="tok-k">if</span> <span class="tok-p">(</span><span class="tok-nb">eq</span> <span class="tok-nv">action</span> <span class="tok-ss">'metadata</span><span class="tok-p">)</span>
+                         <span class="tok-o">`</span><span class="tok-p">(</span><span class="tok-nv">metadata</span>
+                           <span class="tok-p">(</span><span class="tok-nv">annotation-function</span> <span class="tok-o">.</span> <span class="tok-o">,</span><span class="tok-nv">annotf</span><span class="tok-p">)</span>
+                           <span class="tok-p">(</span><span class="tok-nv">cycle-sort-function</span> <span class="tok-o">.</span> <span class="tok-nb">identity</span><span class="tok-p">)</span>
+                           <span class="tok-p">(</span><span class="tok-nv">display-sort-function</span> <span class="tok-o">.</span> <span class="tok-nb">identity</span><span class="tok-p">))</span>
+                       <span class="tok-p">(</span><span class="tok-nv">complete-with-action</span> <span class="tok-nv">action</span> <span class="tok-nv">alist</span> <span class="tok-nv">str</span> <span class="tok-nv">pred</span><span class="tok-p">)))))</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The example disables the default sorting behaviour by using the <code>identity</code>
+function. It also adds some annotations to describe the candidates in more
+detail. Note that there is also <code>completion-extra-properties</code> which can also be
+used to configure certain completion properties.</p>
+</div>
+<div class="paragraph">
+<p>There are many more use cases where dynamic tables can be useful see for example
+<a href="https://emacs.stackexchange.com/a/37446/9198">this</a> stackexchange answer which
+constructs a completion table with automatic caching.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h3 id="_closing_words">Closing words</h3>
+<div class="sectionbody">
+<div class="paragraph">
+<p>This post only talked about <code>completion-at-point</code> but there are many more useful
+ways to complete text in Emacs. One external package worth mentioning in the
+context of this post is the popular
+<a href="https://github.com/company-mode/company-mode">company</a> package which supports
+auto completion.</p>
+</div>
+<div class="paragraph">
+<p>Company also integrates with <code>completion-at-point-functions</code>: The variable
+<code>company-backends</code> includes the <code>company-capf</code> backend which provides you the
+completion candidates of <code>completion-at-point-functions</code>. There are also some
+extra properties you can add to your <code>completion-at-point-functions</code> which are
+picked up by company. You can inspect the source of <code>elisp-completion-at-point</code>
+or <code>company-capf</code> itself for more details on this.</p>
+</div>
+</div>
+</div></div></div>
+			</li>
+			
+			<li>
 				<a class="headline" href="https://craigmod.com/ridgeline/086/">[ridgeline] Summer Walks &#8594;</a> <span class="host">craigmod.com</span>
 				<div class="description">Hello Walkers —
 Alert! WE — the Ridgeline collective — ARE OUT OF WALK BIOS. As of last week we’ve published some 13,000 words of Fellow Walkers. That’s bonkers. So — a call for more bios. Shorter is better. &lt; 50 words if possible. The best Fellow Walkers are quirky, totally of you and you alone (i.e., no general platitudes about walking; we know those already!), and smack-dab to the point.</div>
@@ -265,16 +448,6 @@ Alert! WE — the Ridgeline collective — ARE OUT OF WALK BIOS. As of last week
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/26/the-republican-convention-is-unlikely-to-save-donald-trump">The Republican convention is unlikely to save Donald Trump &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">Candidates used to get a big boost in the polls after such events. Not anymore</div>
-			</li>
-			
-			<li>
-				<a class="headline" href="https://www.economist.com/finance-and-economics/2020/08/26/phil-hogan-europes-trade-commissioner-resigns">Phil Hogan, Europe’s trade commissioner, resigns &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">A controversy over quarantine forces him out</div>
-			</li>
-			
-			<li>
 				<a class="headline" href="https://www.economist.com/britain/2020/08/26/britons-never-never-never-shall-be-free-of-the-culture-wars">Britons never, never, never shall be free of the culture wars &#8594;</a> <span class="host">www.economist.com</span>
 				<div class="description">An inconsequential but convenient fight for the government</div>
 			</li>
@@ -285,13 +458,23 @@ Alert! WE — the Ridgeline collective — ARE OUT OF WALK BIOS. As of last week
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/middle-east-and-africa/2020/08/26/the-war-in-mozambique-is-getting-worse">The war in Mozambique is getting worse &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">An overwhelmed government is worrying others in southern Africa—and beyond</div>
+				<a class="headline" href="https://www.economist.com/united-states/2020/08/26/why-california-is-experiencing-its-worst-fires-on-record">Why California is experiencing its worst fires on record &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">California has been roiled by covid-19, drought, heatwaves and now two of the biggest fires on record</div>
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/united-states/2020/08/26/why-california-is-experiencing-its-worst-fires-on-record">Why California is experiencing its worst fires on record &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">California has been roiled by covid-19, drought, heatwaves and now two of the biggest fires on record</div>
+				<a class="headline" href="https://www.economist.com/finance-and-economics/2020/08/26/phil-hogan-europes-trade-commissioner-resigns">Phil Hogan, Europe’s trade commissioner, resigns &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">A controversy over quarantine forces him out</div>
+			</li>
+			
+			<li>
+				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/26/the-republican-convention-is-unlikely-to-save-donald-trump">The Republican convention is unlikely to save Donald Trump &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">Candidates used to get a big boost in the polls after such events. Not anymore</div>
+			</li>
+			
+			<li>
+				<a class="headline" href="https://www.economist.com/middle-east-and-africa/2020/08/26/the-war-in-mozambique-is-getting-worse">The war in Mozambique is getting worse &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">An overwhelmed government is worrying others in southern Africa—and beyond</div>
 			</li>
 			
 			<li>
@@ -350,23 +533,23 @@ Alert! WE — the Ridgeline collective — ARE OUT OF WALK BIOS. As of last week
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/science-and-technology/2020/08/25/robots-that-can-walk-are-now-striding-to-market">Robots that can walk are now striding to market &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">They will be able to go where people can, but existing bots cannot</div>
-			</li>
-			
-			<li>
 				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/25/the-greenland-ice-sheet-has-melted-past-the-point-of-no-return">The Greenland ice sheet has melted past the point of no return &#8594;</a> <span class="host">www.economist.com</span>
 				<div class="description">Even if global warming stopped today, the ice would keep shrinking</div>
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/by-invitation/2020/08/25/trevor-phillips-on-going-from-rhetoric-to-reform-on-racial-injustice">Trevor Phillips on going from rhetoric to reform on racial injustice &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">America and Britain face different racial problems but both need to exchange sloganeering for substance</div>
+				<a class="headline" href="https://www.economist.com/science-and-technology/2020/08/25/robots-that-can-walk-are-now-striding-to-market">Robots that can walk are now striding to market &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">They will be able to go where people can, but existing bots cannot</div>
 			</li>
 			
 			<li>
 				<a class="headline" href="https://www.economist.com/europe/2020/08/25/five-years-after-wir-schaffen-das-germanys-migrants-are-integrating">Five years after “wir schaffen das”, Germany’s migrants are integrating &#8594;</a> <span class="host">www.economist.com</span>
 				<div class="description">But those whose claims are rejected are stuck in legal limbo</div>
+			</li>
+			
+			<li>
+				<a class="headline" href="https://www.economist.com/by-invitation/2020/08/25/trevor-phillips-on-going-from-rhetoric-to-reform-on-racial-injustice">Trevor Phillips on going from rhetoric to reform on racial injustice &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">America and Britain face different racial problems but both need to exchange sloganeering for substance</div>
 			</li>
 			
 			<li>
@@ -430,13 +613,13 @@ Alert! WE — the Ridgeline collective — ARE OUT OF WALK BIOS. As of last week
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/united-states/2020/08/24/the-republican-party-in-congress-could-become-even-more-male">The Republican Party in Congress could become even more male &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">Record numbers of women are running for office, but the party has failed to diversify</div>
+				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/24/coups-are-less-common-than-they-were-a-half-century-ago">Coups are less common than they were a half-century ago &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">But a greater share of today’s putsches have undesirable long-term consequences</div>
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/24/coups-are-less-common-than-they-were-a-half-century-ago">Coups are less common than they were a half-century ago &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">But a greater share of today’s putsches have undesirable long-term consequences</div>
+				<a class="headline" href="https://www.economist.com/united-states/2020/08/24/the-republican-party-in-congress-could-become-even-more-male">The Republican Party in Congress could become even more male &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">Record numbers of women are running for office, but the party has failed to diversify</div>
 			</li>
 			
 			<li>
@@ -516,15 +699,15 @@ Alert! WE — the Ridgeline collective — ARE OUT OF WALK BIOS. As of last week
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/21/gamers-are-logging-millions-of-hours-a-day-on-roblox">Gamers are logging millions of hours a day on Roblox &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">The platform, popular with tweens, allows developers to cash in on its success</div>
-			</li>
-			
-			<li>
 				<a class="headline" href="https://craigmod.com/ridgeline/085/">[ridgeline] Karuizawa &#8594;</a> <span class="host">craigmod.com</span>
 				<div class="description">Walkers — This is Ridgeline and I&rsquo;m Craig Mod and we&rsquo;re broadcasting from torrential downpour Karuizawa.
 It was hitting 42℃+ in RealFeel™ temps (with 85%+ humidity) around my house last week and so I escaped north by invitation from a friend who had an empty room up here in the mountains. Easily cooler by ten or more degrees. And the humidity? Eminently bearable.
 For the last two days it’s been threatening rain — big, booming, rolling midwestern style bouts of thunder and lightning each afternoon — but failing to deliver.</div>
+			</li>
+			
+			<li>
+				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/21/gamers-are-logging-millions-of-hours-a-day-on-roblox">Gamers are logging millions of hours a day on Roblox &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">The platform, popular with tweens, allows developers to cash in on its success</div>
 			</li>
 			
 			<li>
@@ -533,13 +716,13 @@ For the last two days it’s been threatening rain — big, booming, rolling m
 			</li>
 			
 			<li>
-				<a class="headline" href="https://mjtsai.com/blog/2020/08/20/russell-kirsch-rip/">Russell Kirsch, RIP &#8594;</a> <span class="host">mjtsai.com</span>
-				<div class="description">DL Cade (Hacker News): Computer scientist Russell A. Kirsch, the inventor of the pixel and an undisputed pioneer of digital imaging, passed away on Tuesday in his Portland home from complications arising from a form of Alzheimer&#8217;s disease. He was 91 years old.[&#8230;]As DPReview points out, Kirsch never stopped improving on his most famous invention, [&#8230;]</div>
+				<a class="headline" href="https://mjtsai.com/blog/2020/08/20/what-changed-before-swiftui-1-0/">What Changed Before SwiftUI 1.0 &#8594;</a> <span class="host">mjtsai.com</span>
+				<div class="description">Kuba Suder: However, I was surprised to see how many of those things I wrote down don&#8217;t work anymore.[&#8230;] And the problem is that all those old APIs are still there in the WWDC videos from last year. But WWDC videos are usually a very good source of knowledge, people come back to them years [&#8230;]</div>
 			</li>
 			
 			<li>
-				<a class="headline" href="https://mjtsai.com/blog/2020/08/20/what-changed-before-swiftui-1-0/">What Changed Before SwiftUI 1.0 &#8594;</a> <span class="host">mjtsai.com</span>
-				<div class="description">Kuba Suder: However, I was surprised to see how many of those things I wrote down don&#8217;t work anymore.[&#8230;] And the problem is that all those old APIs are still there in the WWDC videos from last year. But WWDC videos are usually a very good source of knowledge, people come back to them years [&#8230;]</div>
+				<a class="headline" href="https://mjtsai.com/blog/2020/08/20/russell-kirsch-rip/">Russell Kirsch, RIP &#8594;</a> <span class="host">mjtsai.com</span>
+				<div class="description">DL Cade (Hacker News): Computer scientist Russell A. Kirsch, the inventor of the pixel and an undisputed pioneer of digital imaging, passed away on Tuesday in his Portland home from complications arising from a form of Alzheimer&#8217;s disease. He was 91 years old.[&#8230;]As DPReview points out, Kirsch never stopped improving on his most famous invention, [&#8230;]</div>
 			</li>
 			
 			<li>
@@ -563,13 +746,13 @@ For the last two days it’s been threatening rain — big, booming, rolling m
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/20/how-has-the-pandemic-changed-working-lives">How has the pandemic changed working lives? &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">A study concludes: more meetings, more emails, longer hours</div>
+				<a class="headline" href="https://www.economist.com/united-states/2020/08/20/steve-bannon-is-arrested-for-fraud">Steve Bannon is arrested for fraud &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">Yet another of Donald Trump’s former aides is in trouble</div>
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/united-states/2020/08/20/steve-bannon-is-arrested-for-fraud">Steve Bannon is arrested for fraud &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">Yet another of Donald Trump’s former aides is in trouble</div>
+				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/20/how-has-the-pandemic-changed-working-lives">How has the pandemic changed working lives? &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">A study concludes: more meetings, more emails, longer hours</div>
 			</li>
 			
 			<li>
@@ -653,13 +836,13 @@ For the last two days it’s been threatening rain — big, booming, rolling m
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/international/2020/08/18/the-covid-19-pandemic-will-be-over-by-the-end-of-2021-says-bill-gates">The covid-19 pandemic will be over by the end of 2021, says Bill Gates &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">But millions of deaths are yet to come in poor countries</div>
+				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/18/how-donald-trump-polarised-postal-voting">How Donald Trump polarised postal voting &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">The president’s assault on voting by mail has hardened opinion among Republican covid-sceptics</div>
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/18/how-donald-trump-polarised-postal-voting">How Donald Trump polarised postal voting &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">The president’s assault on voting by mail has hardened opinion among Republican covid-sceptics</div>
+				<a class="headline" href="https://www.economist.com/international/2020/08/18/the-covid-19-pandemic-will-be-over-by-the-end-of-2021-says-bill-gates">The covid-19 pandemic will be over by the end of 2021, says Bill Gates &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">But millions of deaths are yet to come in poor countries</div>
 			</li>
 			
 			<li>
@@ -718,11 +901,6 @@ For the last two days it’s been threatening rain — big, booming, rolling m
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/16/the-pressure-points-in-britains-food-supply-chain">The pressure points in Britain’s food supply chain &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">A new report reveals weaknesses in the food system’s response to the pandemic</div>
-			</li>
-			
-			<li>
 				<a class="headline" href="https://www.economist.com/united-states/2020/08/16/before-the-election-donald-trump-squeezes-the-postal-service">Before the election, Donald Trump squeezes the postal service &#8594;</a> <span class="host">www.economist.com</span>
 				<div class="description">Deprived of funds, it will struggle to handle mail-in voting</div>
 			</li>
@@ -730,6 +908,11 @@ For the last two days it’s been threatening rain — big, booming, rolling m
 			<li>
 				<a class="headline" href="https://www.economist.com/international/2020/08/16/america-musters-the-worlds-biggest-naval-exercise">America musters the world’s biggest naval exercise &#8594;</a> <span class="host">www.economist.com</span>
 				<div class="description">The drills come as America and China are locking horns across Asia</div>
+			</li>
+			
+			<li>
+				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/16/the-pressure-points-in-britains-food-supply-chain">The pressure points in Britain’s food supply chain &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">A new report reveals weaknesses in the food system’s response to the pandemic</div>
 			</li>
 			
 			<li>
@@ -818,14 +1001,14 @@ For the last two days it’s been threatening rain — big, booming, rolling m
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/12/coronavirus-fears-are-taking-a-toll-on-britains-economy">Coronavirus fears are taking a toll on Britain’s economy &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">Despite similar infection rates, the country is slower to venture outside than the rest of Europe</div>
-			</li>
-			
-			<li>
 				<a class="headline" href="https://craigmod.com/ridgeline/084/">[ridgeline] A Tiny Celebration &#8594;</a> <span class="host">craigmod.com</span>
 				<div class="description">Ohhhh you wonderful walkers, you —
 I’m Craig Mod, and this is Ridgeline, and about a thousand more of you have subscribed in the last week or so — probably via my Kissa by Kissa book campaign. Welcome! I am blown away by the interest in that book. Thank you for your voracious support. We sold out in about 48 hours. That’s nuts. Right now, the focus is on fulfilling, numbering, and signing this first edition.</div>
+			</li>
+			
+			<li>
+				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/12/coronavirus-fears-are-taking-a-toll-on-britains-economy">Coronavirus fears are taking a toll on Britain’s economy &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">Despite similar infection rates, the country is slower to venture outside than the rest of Europe</div>
 			</li>
 			
 			<li>
@@ -864,13 +1047,13 @@ I’m Craig Mod, and this is Ridgeline, and about a thousand more of you have su
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/11/how-americas-jails-are-helping-spread-covid-19">How America’s jails are helping spread covid-19 &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">Cook County jail in Chicago may have been responsible for thousands of the city’s cases</div>
+				<a class="headline" href="https://www.economist.com/united-states/2020/08/11/joe-biden-picks-kamala-harris-as-his-running-mate">Joe Biden picks Kamala Harris as his running-mate &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">His choice is both groundbreaking and conventional</div>
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/united-states/2020/08/11/joe-biden-picks-kamala-harris-as-his-running-mate">Joe Biden picks Kamala Harris as his running-mate &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">His choice is both groundbreaking and conventional</div>
+				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/11/how-americas-jails-are-helping-spread-covid-19">How America’s jails are helping spread covid-19 &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">Cook County jail in Chicago may have been responsible for thousands of the city’s cases</div>
 			</li>
 			
 			<li>
@@ -919,8 +1102,8 @@ I’m Craig Mod, and this is Ridgeline, and about a thousand more of you have su
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/10/joe-bidens-vice-presidential-pick-is-unlikely-to-sway-very-many-voters">Joe Biden’s vice-presidential pick is unlikely to sway very many voters &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">This is especially true of Kamala Harris, who is leading the pack</div>
+				<a class="headline" href="https://www.economist.com/middle-east-and-africa/2020/08/10/after-the-devastating-explosion-lebanons-prime-minister-quits">After the devastating explosion, Lebanon’s prime minister quits &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">But his departure may do little to shake up the corrupt political system that caused the disaster</div>
 			</li>
 			
 			<li>
@@ -929,8 +1112,8 @@ I’m Craig Mod, and this is Ridgeline, and about a thousand more of you have su
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/middle-east-and-africa/2020/08/10/after-the-devastating-explosion-lebanons-prime-minister-quits">After the devastating explosion, Lebanon’s prime minister quits &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">But his departure may do little to shake up the corrupt political system that caused the disaster</div>
+				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/10/joe-bidens-vice-presidential-pick-is-unlikely-to-sway-very-many-voters">Joe Biden’s vice-presidential pick is unlikely to sway very many voters &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">This is especially true of Kamala Harris, who is leading the pack</div>
 			</li>
 			
 			<li>
@@ -1184,11 +1367,6 @@ Once you pass Fort Dodge on Hwy 20, all this area is more isolated than the east
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/middle-east-and-africa/2020/08/07/zimbabwes-white-farmers-are-promised-a-speck-of-compensation">Zimbabwe’s white farmers are promised a speck of compensation &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">But it is still unclear whether it will be worth the paper it’s written on</div>
-			</li>
-			
-			<li>
 				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/07/the-case-for-splurging-on-covid-19-vaccines">The case for splurging on covid-19 vaccines &#8594;</a> <span class="host">www.economist.com</span>
 				<div class="description">Australia’s internal borders • Universities and the pandemic • America’s weird earnings season • Coming out in the internet age</div>
 			</li>
@@ -1196,6 +1374,11 @@ Once you pass Fort Dodge on Hwy 20, all this area is more isolated than the east
 			<li>
 				<a class="headline" href="https://www.economist.com/graphic-detail/2020/08/07/most-americans-do-not-want-to-send-their-children-back-to-school">Most Americans do not want to send their children back to school &#8594;</a> <span class="host">www.economist.com</span>
 				<div class="description">Parents are fearful even in places where the epidemic is under control</div>
+			</li>
+			
+			<li>
+				<a class="headline" href="https://www.economist.com/middle-east-and-africa/2020/08/07/zimbabwes-white-farmers-are-promised-a-speck-of-compensation">Zimbabwe’s white farmers are promised a speck of compensation &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">But it is still unclear whether it will be worth the paper it’s written on</div>
 			</li>
 			
 			<li>
@@ -1391,11 +1574,6 @@ First and foremost — IT’S ALIVE — the book, Kissa by Kissa:
 			</li>
 			
 			<li>
-				<a class="headline" href="https://www.economist.com/international/2020/08/03/for-those-affected-by-dementia-the-pandemic-has-been-especially-grim">For those affected by dementia, the pandemic has been especially grim &#8594;</a> <span class="host">www.economist.com</span>
-				<div class="description">But new research offers some faint glimmers of hope</div>
-			</li>
-			
-			<li>
 				<a class="headline" href="https://craigmod.com/ridgeline/083/">[ridgeline] Kissa by Kissa by Book by Launch &#8594;</a> <span class="host">craigmod.com</span>
 				<div class="description">Walkers —
 Hello! My new book, Kissa by Kissa (about walking across Japan on the Nakasendō, visiting kissaten, and eating (pizza) toast last year), is out!
@@ -1406,6 +1584,11 @@ Here&rsquo;s your bog-standard big, requisite buy button:
 			<li>
 				<a class="headline" href="https://protesilaos.com/codelog/2020-08-03-emacs-custom-functions-galore/">Emacs: custom functions galore! &#8594;</a> <span class="host">protesilaos.com</span>
 				<div class="description">Video presentation of bespoke commands that improve my Emacs experience.</div>
+			</li>
+			
+			<li>
+				<a class="headline" href="https://www.economist.com/international/2020/08/03/for-those-affected-by-dementia-the-pandemic-has-been-especially-grim">For those affected by dementia, the pandemic has been especially grim &#8594;</a> <span class="host">www.economist.com</span>
+				<div class="description">But new research offers some faint glimmers of hope</div>
 			</li>
 			
 			<li>
@@ -1434,8 +1617,8 @@ Here&rsquo;s your bog-standard big, requisite buy button:
 			</li>
 			
 			<li>
-				<a class="headline" href="https://protesilaos.com/codelog/2020-07-31-modus-themes-0-11-0/">Released Modus themes 0.11.0 &#8594;</a> <span class="host">protesilaos.com</span>
-				<div class="description">Information about the latest release of my highly-accessible themes for Emacs.</div>
+				<a class="headline" href="https://craigmod.com/ridgeline/082/">[ridgeline] No Fly Walk Zone &#8594;</a> <span class="host">craigmod.com</span>
+				<div class="description">Walkers — Oooooohhhhh boy, am I cross-eyed-tired right now. Keep me away from heavy machinery and InDesign files. The last few days have been a whirlwind of late-night book-launch prep spanning a whole slew of disciplines. I&rsquo;ve had my marketing, engineering, design, and literary hats on. I’ve had my typography hat on for the last six hours. Zooming with talented friends galore to check last minutes changes. The long and short: Kissa by Kissa will launch for SP members on Sunday evening JST (9pm-ish), during which I&rsquo;ll do a kind of &ldquo;launch livestream.</div>
 			</li>
 			
 			<li>
@@ -1449,8 +1632,8 @@ Here&rsquo;s your bog-standard big, requisite buy button:
 			</li>
 			
 			<li>
-				<a class="headline" href="https://craigmod.com/ridgeline/082/">[ridgeline] No Fly Walk Zone &#8594;</a> <span class="host">craigmod.com</span>
-				<div class="description">Walkers — Oooooohhhhh boy, am I cross-eyed-tired right now. Keep me away from heavy machinery and InDesign files. The last few days have been a whirlwind of late-night book-launch prep spanning a whole slew of disciplines. I&rsquo;ve had my marketing, engineering, design, and literary hats on. I’ve had my typography hat on for the last six hours. Zooming with talented friends galore to check last minutes changes. The long and short: Kissa by Kissa will launch for SP members on Sunday evening JST (9pm-ish), during which I&rsquo;ll do a kind of &ldquo;launch livestream.</div>
+				<a class="headline" href="https://protesilaos.com/codelog/2020-07-31-modus-themes-0-11-0/">Released Modus themes 0.11.0 &#8594;</a> <span class="host">protesilaos.com</span>
+				<div class="description">Information about the latest release of my highly-accessible themes for Emacs.</div>
 			</li>
 			
 			<li>
@@ -1556,6 +1739,195 @@ Here&rsquo;s your bog-standard big, requisite buy button:
 			<li>
 				<a class="headline" href="https://standardebooks.org/ebooks/p-g-wodehouse/piccadilly-jim">Piccadilly Jim, by P. G. Wodehouse &#8594;</a> <span class="host">standardebooks.org</span>
 				<div class="description">Jimmy Crocker gets embroiled in convoluted comedic escapades, involving impersonations, kidnapping and theft, on both sides of the Atlantic.</div>
+			</li>
+			
+			<li>
+				<a class="headline" href="https://www.with-emacs.com/posts/tutorials/what-you-need-to-know-about-hooks/">What you Need to Know About Hooks &#8594;</a> <span class="host">www.with-emacs.com</span>
+				<div class="description"><div><div class="paragraph">
+<p>Hooks are an important mechanism for customizing Emacs. They are used to execute
+code on certain occasions and are part of any non-trivial Emacs setup. In this
+post you will learn how to use them for your own configurations and about some
+pitfalls you might encounter in practice.</p>
+</div>
+<div class="paragraph">
+<p>This post assumes that you already know some basics about Elisp and variables as
+discussed
+<a href="https://with-emacs.com/posts/tutorials/almost-all-you-need-to-know-about-variables/">earlier</a>.
+All examples also assume you use a fairly recent Emacs version (v.26 or later).</p>
+</div>
+<div class="sect1">
+<h3 id="_basic_usage">Basic usage</h3>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Hooks are regular variables which hold a function or more commonly a list of
+them. These functions are called when the hook runs. Here is a typical snippet
+of user configuration:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="emacs"><span class="tok-p">(</span><span class="tok-nv">add-hook</span> <span class="tok-ss">'after-save-hook</span> <span class="tok-nf">#'</span><span class="tok-nv">executable-make-buffer-file-executable-if-script-p</span><span class="tok-p">)</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The above adds the function <code>executable-make-buffer-file-executable-if-script-p</code>
+to <code>after-save-hook</code>. Afterwards this function gets called each time you save a
+buffer. If the file is a script (as detected by
+<a href="https://en.wikipedia.org/wiki/Shebang_(Unix)">#!</a>) the file is made executable.</p>
+</div>
+<div class="paragraph">
+<p>To remove the function again you use <code>remove-hook</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="emacs"><span class="tok-p">(</span><span class="tok-nv">remove-hook</span> <span class="tok-ss">'after-save-hook</span> <span class="tok-nf">#'</span><span class="tok-nv">executable-make-buffer-file-executable-if-script-p</span><span class="tok-p">)</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>By convention those variables end with <code>-hook</code> in their name so you can easily
+search for them. Because many packages and modes come with their own set of
+hooks it can be hard to track down the more general ones but you can find a list
+of the standard Emacs hooks in the
+<a href="https://www.gnu.org/software/emacs/manual/html_node/elisp/Standard-Hooks.html">manual</a>.</p>
+</div>
+<div class="paragraph">
+<p>It’s important to mention that you shouldn’t use anonymous functions for your
+hooks because it becomes hard to tell the purpose of a <code>lambda</code> when you inspect
+the hook at some later point. Another benefit of using named functions is that
+you can easily remove them by passing their name to <code>remove-hook</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h3 id="_major_mode_hooks">Major mode hooks</h3>
+<div class="sectionbody">
+<div class="paragraph">
+<p>If you want to run setup functions for specific modes you can use major mode
+hooks. These hooks will run when you enter the mode. Note that hooks don’t need
+to be defined ahead of time so you can add functions to them before the
+corresponding mode is loaded by Emacs.</p>
+</div>
+<div class="paragraph">
+<p>Sometimes you will come across examples where major mode hooks are used to setup
+keybindings like this:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="emacs"><span class="tok-p">(</span><span class="tok-nb">defun</span> <span class="tok-nv">python-key-setup+</span> <span class="tok-p">()</span>
+  <span class="tok-p">(</span><span class="tok-nv">local-set-key</span> <span class="tok-o">...</span><span class="tok-p">)</span> <span class="tok-o">...</span><span class="tok-p">)</span>
+
+<span class="tok-p">(</span><span class="tok-nv">add-hook</span> <span class="tok-ss">'python-mode-hook</span> <span class="tok-nf">#'</span><span class="tok-nv">python-key-setup+</span><span class="tok-p">)</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>While this works it will set the key bindings every time a buffer enters the
+mode which isn’t necessary. The local keymap is usually the major mode keymap
+which is shared by all buffers which use that mode. You can achieve the same
+effect by defining the bindings only once after the keymap is available:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="emacs"><span class="tok-p">(</span><span class="tok-nv">with-eval-after-load</span> <span class="tok-ss">'python</span>
+  <span class="tok-p">(</span><span class="tok-nv">define-key</span> <span class="tok-nv">python-mode-map</span> <span class="tok-o">...</span><span class="tok-p">))</span></code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h3 id="_buffer_local_hooks">Buffer local hooks</h3>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In the first section <code>executable-make-buffer-file-executable-if-script-p</code> was
+added to the global hook but often you want to adjust hooks only for specific
+buffers. You might be tempted to check for buffer names or major modes in your
+hook functions like this:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="emacs"><span class="tok-p">(</span><span class="tok-nv">add-hook</span> <span class="tok-ss">'after-save-hook</span> <span class="tok-nf">#'</span><span class="tok-nv">after-save-in-some-buffer+</span><span class="tok-p">)</span>
+
+<span class="tok-p">(</span><span class="tok-nb">defun</span> <span class="tok-nv">after-save-in-some-buffer+</span> <span class="tok-p">()</span>
+  <span class="tok-p">(</span><span class="tok-nb">when</span> <span class="tok-p">(</span><span class="tok-nb">string=</span> <span class="tok-p">(</span><span class="tok-nv">buffer-name</span><span class="tok-p">)</span> <span class="tok-o">...</span><span class="tok-p">)</span>
+    <span class="tok-o">...</span><span class="tok-p">))</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>But a better way is to adjust the hook variable buffer locally by using the
+<code>local</code> argument of <code>add-hook</code> and <code>remove-hook</code>. For example if you want to run
+the <code>executable-make-buffer-file-executable-if-script-p</code> only in <code>sh-mode</code>
+buffers you can use:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="emacs"><span class="tok-p">(</span><span class="tok-nb">defun</span> <span class="tok-nv">sh-mode-setup+</span> <span class="tok-p">()</span>
+  <span class="tok-p">(</span><span class="tok-nv">add-hook</span> <span class="tok-ss">'after-save-hook</span>
+            <span class="tok-nf">#'</span><span class="tok-nv">executable-make-buffer-file-executable-if-script-p</span>
+            <span class="tok-no">nil</span> <span class="tok-ss">'local</span><span class="tok-p">))</span>
+
+<span class="tok-p">(</span><span class="tok-nv">add-hook</span> <span class="tok-ss">'sh-mode-hook</span> <span class="tok-nf">#'</span><span class="tok-nv">sh-mode-setup+</span><span class="tok-p">)</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>When the major mode <code>sh-mode</code> is entered, <code>sh-mode-setup+</code> will run and add
+<code>executable-make-buffer-file-executable-if-script-p</code> to the buffer local save
+hook.</p>
+</div>
+<div class="paragraph">
+<p>Usually you shouldn’t use <code>make-local-variable</code> to make hook variables local
+because <code>add-hook</code> automatically handles some things for you: It arranges for a
+final <code>t</code> at the end of the local hook list. This will tell <code>run-hooks</code> that the
+global hook should run as well. Usually this is what you want because the global
+hook should be expected to run regardless of any additional local setup. Further
+any subsequent calls to <code>add-hook</code> won’t automatically affect the local value
+which is useful because there might be some other setup functions running down
+the chain which don’t expect the hook variable to be local.</p>
+</div>
+<div class="paragraph">
+<p>Like with other local variables if you want to get completely rid of the local
+version you can use <code>kill-local-variable</code>.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h3 id="_minor_mode_hooks">Minor mode hooks</h3>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A common pitfall is to think minor mode hooks work like major mode hooks but
+there is an important difference: Minor modes run their hooks when you enter
+<strong>and</strong> when you leave them. This can be used to run additional setup or teardown
+code. For example if you always want to toggle a mode in tandem with another one
+you can use something like:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="emacs"><span class="tok-p">(</span><span class="tok-nv">add-hook</span> <span class="tok-ss">'visual-fill-column-mode-hook</span> <span class="tok-nf">#'</span><span class="tok-nv">visual-fill-column-toggle-wrap+</span><span class="tok-p">)</span>
+
+<span class="tok-p">(</span><span class="tok-nb">defun</span> <span class="tok-nv">visual-fill-column-toggle-wrap+</span> <span class="tok-p">()</span>
+  <span class="tok-p">(</span><span class="tok-nv">adaptive-wrap-prefix-mode</span>
+   <span class="tok-p">(</span><span class="tok-k">if</span> <span class="tok-nv">visual-fill-column-mode</span> <span class="tok-mi">1</span> <span class="tok-mi">-1</span><span class="tok-p">)))</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The mode variable <code>visual-fill-column-mode</code> will be <code>t</code> when activating the
+mode.  The example above uses this to activate and deactivate
+<code>adaptive-wrap-prefix-mode</code> accordingly.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h3 id="_abnormal_hooks">Abnormal hooks</h3>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In contrast to the normal hooks this post talked about there are also so called
+abnormal hooks which by convention end with <code>-functions</code> in their name. Those
+can receive additional arguments or their return value is used for further
+processing. The exact details need to be described by their documentation. They
+are not as relevant for user configuration but can be very useful when writing
+Elisp so you might want to learn more about how to use them (see the
+comments). Generally the same concepts apply for these hooks and conveniently
+you can continue to use <code>add-hook</code> or <code>remove-hook</code> for them, too.</p>
+</div>
+</div>
+</div></div></div>
 			</li>
 			
 			<li>
@@ -1893,7 +2265,7 @@ Last year, just as I was about to head up into the mountains on the northern sid
 
 		<footer>
 			<p><a href="https://github.com/jamesroutley/news.routley.io">What is this?</a></p>
-			<p>Last updated on 01 September 2020 at 18:12 UTC</p>
+			<p>Last updated on 01 September 2020 at 18:55 UTC</p>
 		</footer>
 	</body>
 </html>
