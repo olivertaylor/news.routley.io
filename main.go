@@ -47,6 +47,7 @@ var (
 		"https://endlessparentheses.com/atom.xml",
 		"https://200ok.ch/atom.xml",
 		"https://www.raptitude.com/feed/",
+		"https://with-emacs.com/rss.xml",
 	}
 
 	// Show up to 60 days of posts
