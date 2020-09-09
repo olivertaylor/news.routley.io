@@ -50,6 +50,7 @@ var (
 		"https://nullprogram.com/tags/emacs/feed/",
 		"https://sachachua.com/blog/category/emacs-news/feed",
 		"https://protesilaos.com/codelog.xml",
+		"https://karl-voit.at/feeds/lazyblorg-all.atom_1.0.links-only.xml",
 	}
 
 	// Show up to 60 days of posts
